@@ -1,0 +1,10 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+tests/
+experiments/
+data/sample_mris/
+.cache/
+artifacts_uploaded_test.jpg
+*.log

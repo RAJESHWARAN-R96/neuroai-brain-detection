@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroAI - Brain Tumor MRI Detection Platform</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="brand-container">
+      <div class="brand-icon">
+        <i class="fa-solid fa-brain text-white text-lg"></i>
+      </div>
+      <div>
+        <div class="brand-title">NeuroAI Diagnosis</div>
+        <div class="brand-subtitle">Clinical Deep Learning Platform</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('tab-diagnosis')">
+        <i class="fa-solid fa-microscope"></i> Clinical Diagnosis
+      </button>
+      <button class="nav-btn" onclick="switchTab('tab-database')">
+        <i class="fa-solid fa-database"></i> Patient Database
+      </button>
+      <button class="nav-btn" onclick="switchTab('tab-methodology')">
+        <i class="fa-solid fa-book-medical"></i> Clinical Methodology
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main App Container -->
+  <main class="app-container">
+
+    <!-- ==================== TAB 1: CLINICAL DIAGNOSIS ==================== -->
+    <section id="tab-diagnosis" class="tab-content active">
+      <div class="grid-2">
+        
+        <!-- Left Column: Upload, Presets & Controls -->
+        <div class="glass-card">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fa-solid fa-upload" style="color: var(--accent-cyan);"></i> MRI Acquisition & Controls</h2>
+            <p class="section-desc">Upload a clinical T1-CE brain MRI scan or select an instant benchmark sample.</p>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="dropzone" id="mri-dropzone" onclick="document.getElementById('file-input').click()">
+            <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileUpload(this.files[0])">
+            <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+            <div class="dropzone-title">Drag & Drop Brain MRI Scan Here</div>
+            <div class="dropzone-sub">Supports DICOM, PNG, JPG, TIFF (High-Res 224x224+)</div>
+          </div>
+
+          <!-- Preset Benchmark Samples -->
+          <div style="margin-top: 1.25rem;">
+            <div class="form-label"><i class="fa-solid fa-flask" style="color: var(--accent-amber);"></i> Quick Benchmark Samples (4 Classes):</div>
+            <div class="sample-grid" id="sample-grid">
+              <div class="sample-chip" onclick="loadSampleMRI('glioma')">
+                <div class="sample-name"><i class="fa-solid fa-circle" style="color: #ef4444;"></i> Glioma</div>
+              </div>
+              <div class="sample-chip" onclick="loadSampleMRI('meningioma')">
+                <div class="sample-name"><i class="fa-solid fa-circle" style="color: #f59e0b;"></i> Meningioma</div>
+              </div>
+              <div class="sample-chip" onclick="loadSampleMRI('pituitary')">
+                <div class="sample-name"><i class="fa-solid fa-circle" style="color: #3b82f6;"></i> Pituitary</div>
+              </div>
+              <div class="sample-chip" onclick="loadSampleMRI('notumor')">
+                <div class="sample-name"><i class="fa-solid fa-circle" style="color: #10b981;"></i> Healthy</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Patient Info -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem;">
+            <div class="form-group">
+              <label class="form-label">Patient ID</label>
+              <input type="text" id="patient-id" class="form-input" value="PAT-84920">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Patient Name</label>
+              <input type="text" id="patient-name" class="form-input" value="Jane Doe">
+            </div>
+          </div>
+
+          <!-- Preprocessing Options -->
+          <div class="form-group">
+            <label class="form-label">Medical Preprocessing Pipeline</label>
+            <div class="toggle-group">
+              <label class="toggle-item">
+                <input type="checkbox" id="prep-crop" checked> Skull Stripping (Cropping)
+              </label>
+              <label class="toggle-item">
+                <input type="checkbox" id="prep-clahe" checked> CLAHE Contrast
+              </label>
+              <label class="toggle-item">
+                <input type="checkbox" id="prep-denoise" checked> Bilateral Denoising
+              </label>
+            </div>
+          </div>
+
+          <!-- Model & XAI Selector -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label">AI Architecture</label>
+              <select id="model-select" class="form-select">
+                <option value="ensemble" selected>GWO-Optimized Multi-Model Ensemble (90.3% Top Accuracy)</option>
+                <option value="densenet121">DenseNet-121 Deep Backbone (High Sensitivity)</option>
+                <option value="efficientnet_b0">EfficientNet-B0 Deep Backbone (High Specificity)</option>
+                <option value="resnet50">ResNet-50 Residual Backbone</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Explainable AI (XAI)</label>
+              <select id="xai-select" class="form-select">
+                <option value="gradcam_plus_plus" selected>Grad-CAM++ (High-Res Lesions)</option>
+                <option value="gradcam">Standard Grad-CAM</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button class="btn-primary" id="btn-diagnose" onclick="runDiagnosis()" style="margin-top: 0.5rem;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Diagnostic Analysis
+          </button>
+        </div>
+
+        <!-- Right Column: Live MRI Viewer & Explainability -->
+        <div class="glass-card">
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-eye" style="color: var(--accent-violet);"></i> Multi-Layer MRI Visualizer</h2>
+              <p class="section-desc">Interactive Grad-CAM Saliency Overlay & Tumor Localization</p>
+            </div>
+            <button class="btn-secondary" id="btn-export-pdf" onclick="exportPDFReport()" style="display: none;">
+              <i class="fa-solid fa-file-pdf" style="color: #f87171;"></i> Export Clinical PDF
+            </button>
+          </div>
+
+          <!-- Interactive MRI Display Frame -->
+          <div class="viewer-container">
+            <div class="mri-display-frame">
+              <img id="view-raw" class="mri-layer" src="" style="display: none;" alt="Raw MRI">
+              <img id="view-prep" class="mri-layer" src="" style="display: none;" alt="Preprocessed MRI">
+              <img id="view-xai" class="mri-layer" src="" style="display: none; opacity: 0.65;" alt="GradCAM Overlay">
+              
+              <div id="viewer-placeholder" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                <i class="fa-solid fa-brain" style="font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                <div>Upload a scan or pick a sample above to view interactive diagnosis</div>
+              </div>
+            </div>
+
+            <!-- Heatmap Opacity Slider -->
+            <div class="slider-container" id="opacity-control" style="display: none;">
+              <span style="font-size: 0.78rem; color: var(--text-secondary);"><i class="fa-solid fa-sliders"></i> Saliency Opacity:</span>
+              <input type="range" id="xai-opacity" min="0" max="100" value="65" oninput="updateHeatmapOpacity(this.value)">
+              <span id="opacity-val" style="font-size: 0.8rem; font-weight: 700; min-width: 35px; color: var(--accent-cyan);">65%</span>
+            </div>
+          </div>
+
+          <!-- Diagnostic Results Section -->
+          <div id="diagnostic-results" style="display: none; margin-top: 1.25rem;">
+            
+            <!-- Verdict Banner -->
+            <div id="verdict-card" class="verdict-banner normal">
+              <div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">AI Diagnostic Verdict</div>
+                <div id="verdict-title" class="verdict-class">No Tumor Detected</div>
+              </div>
+              <div id="verdict-confidence" class="verdict-conf">98.5% Confidence</div>
+            </div>
+
+            <!-- Probability Bars -->
+            <div style="margin-bottom: 1rem;">
+              <div class="form-label" style="margin-bottom: 0.5rem;">Class Probability Distribution:</div>
+              <div class="prob-item">
+                <div class="prob-header"><span>Glioma</span><span id="prob-val-glioma">0.0%</span></div>
+                <div class="prob-track"><div id="prob-bar-glioma" class="prob-fill fill-glioma" style="width: 0%;"></div></div>
+              </div>
+              <div class="prob-item">
+                <div class="prob-header"><span>Meningioma</span><span id="prob-val-meningioma">0.0%</span></div>
+                <div class="prob-track"><div id="prob-bar-meningioma" class="prob-fill fill-meningioma" style="width: 0%;"></div></div>
+              </div>
+              <div class="prob-item">
+                <div class="prob-header"><span>Pituitary Tumor</span><span id="prob-val-pituitary">0.0%</span></div>
+                <div class="prob-track"><div id="prob-bar-pituitary" class="prob-fill fill-pituitary" style="width: 0%;"></div></div>
+              </div>
+              <div class="prob-item">
+                <div class="prob-header"><span>Healthy / No Tumor</span><span id="prob-val-notumor">0.0%</span></div>
+                <div class="prob-track"><div id="prob-bar-notumor" class="prob-fill fill-notumor" style="width: 0%;"></div></div>
+              </div>
+            </div>
+
+            <!-- Quantitative Lesion Metrics Grid -->
+            <!-- Quantitative Lesion Metrics Grid -->
+            <div class="grid-2" style="gap: 0.75rem;">
+              <div class="metric-box">
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Estimated Tumor Burden</div>
+                <div id="metric-area" style="font-size: 1.1rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.2rem;">0.00%</div>
+              </div>
+              <div class="metric-box">
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Anatomical Quadrant</div>
+                <div id="metric-quadrant" style="font-size: 0.85rem; font-weight: 800; color: var(--text-primary); margin-top: 0.2rem;">Normal Parenchyma</div>
+              </div>
+            </div>
+
+            <!-- Clinical Advisor: Curability & Pharmacotherapy Recommendations -->
+            <div id="clinical-advisor-card" style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1.25rem;">
+              
+              <!-- Curability & Remission Probability Meter -->
+              <div class="advisor-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span class="form-label" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0;">
+                    <i class="fa-solid fa-heart-pulse" style="color: var(--accent-cyan);"></i> Estimated Curability & Remission Rate
+                  </span>
+                  <span id="curability-badge" style="font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; background: rgba(5, 150, 105, 0.12); color: #059669; border: 1.5px solid #059669;">
+                    --% Curable
+                  </span>
+                </div>
+
+                <!-- Curable vs Non-Curable Dual Track -->
+                <div class="meter-track-container">
+                  <div id="meter-curable" style="height: 100%; width: 85%; background: linear-gradient(90deg, #10b981, #0284c7); transition: width 0.8s ease;"></div>
+                  <div id="meter-non-curable" style="height: 100%; width: 15%; background: linear-gradient(90deg, #f59e0b, #ef4444); transition: width 0.8s ease;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 0.4rem;">
+                  <span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Curable / Remission: <span id="text-curable-pct">--%</span></span>
+                  <span style="color: #dc2626; font-weight: 700;"><i class="fa-solid fa-circle-exclamation"></i> Chronic / Recurrence Risk: <span id="text-non-curable-pct">--%</span></span>
+                </div>
+
+                <div id="curability-summary" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.6rem; line-height: 1.45; border-left: 3px solid var(--accent-cyan); padding-left: 0.6rem;">
+                  Assessment of curative potential based on histological subtype and localized lesion burden.
+                </div>
+              </div>
+
+              <!-- Recommended Surgical & Clinical Solution -->
+              <div class="advisor-card">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                  <span class="form-label" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0;">
+                    <i class="fa-solid fa-user-doctor" style="color: var(--accent-violet);"></i> Recommended Treatment Pathway
+                  </span>
+                  <span id="solution-urgency" style="font-size: 0.7rem; font-weight: 700; color: #0284c7; background: #e0f2fe; border: 1px solid #bae6fd; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                    Standard Protocol
+                  </span>
+                </div>
+                <div id="solution-title" style="font-size: 0.88rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">
+                  Maximal Safe Resection Protocol
+                </div>
+                <div id="solution-desc" style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
+                  Clinical pathway steps and radiation therapy guidance.
+                </div>
+              </div>
+
+              <!-- Prescribed Medications & Pharmacotherapy -->
+              <div class="advisor-card">
+                <div class="form-label" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.65rem;">
+                  <i class="fa-solid fa-pills" style="color: #d97706;"></i> Recommended Prescribed Medications & Clinical Dosage
+                </div>
+                <div id="medicines-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <!-- Dynamically populated medicine items -->
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: PATIENT DATABASE ==================== -->
+    <section id="tab-database" class="tab-content">
+      <div class="glass-card">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 class="section-title"><i class="fa-solid fa-hospital-user" style="color: var(--accent-cyan);"></i> Patient Scan Diagnostic Records</h2>
+            <p class="section-desc">Recent MRI diagnostic scans, severity triage, and archived clinical PDF reports.</p>
+          </div>
+          <button class="btn-secondary" onclick="loadPatientHistory()">
+            <i class="fa-solid fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Scan ID</th>
+              <th>Patient ID / Name</th>
+              <th>Date & Time</th>
+              <th>Diagnosis</th>
+              <th>Confidence</th>
+              <th>Severity</th>
+              <th>Model Used</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <!-- Populated via JS API -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: METHODOLOGY ==================== -->
+    <section id="tab-methodology" class="tab-content">
+      <div class="grid-2">
+        <div class="glass-card">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fa-solid fa-dna" style="color: var(--accent-violet);"></i> Medical Preprocessing Pipeline</h2>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+            <p style="margin-bottom: 0.75rem;">
+              <b>1. Skull Stripping (Extreme Contour Cropping):</b> Automatically isolates cerebral brain tissue from cranial bones and background margins using Otsu adaptive thresholding and morphological closing.
+            </p>
+            <p style="margin-bottom: 0.75rem;">
+              <b>2. CLAHE Contrast Enhancement:</b> Operates on the luminance channel of the LAB color space to enhance subtle lesion boundaries and micro-structures without amplifying background noise.
+            </p>
+            <p>
+              <b>3. Bilateral Edge-Preserving Denoising:</b> Smooths MRI acquisition grain while keeping pathological tumor margins sharp.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fa-solid fa-network-wired" style="color: var(--accent-cyan);"></i> Deep Learning & Explainable AI (XAI)</h2>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+            <p style="margin-bottom: 0.75rem;">
+              <b>1. Multi-Model Vision Backbones:</b> Evaluated DenseNet-121, ResNet-50, EfficientNet-B0, and custom CBAM Attention CNN trained on the Kaggle 7,023 brain MRI dataset.
+            </p>
+            <p style="margin-bottom: 0.75rem;">
+              <b>2. Grad-CAM++ Saliency Mapping:</b> Uses higher-order gradient weighting to localize complex, diffused, or micro-scale brain tumors with pixel-level precision.
+            </p>
+            <p>
+              <b>3. Clinical Quantitative Metrics:</b> Computes automated bounding boxes, center-of-mass centroids, estimated tumor burden percentage, and anatomical quadrant localization.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JavaScript Application Logic -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
