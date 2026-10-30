@@ -179,6 +179,31 @@ def create_app():
 app = create_app()
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    return response
+
+
+@app.route('/api/<path:subpath>', methods=['OPTIONS'])
+@app.route('/uploads/<path:subpath>', methods=['OPTIONS'])
+@app.route('/sample_images/<path:subpath>', methods=['OPTIONS'])
+def handle_options_preflight(subpath=''):
+    return ('', 204)
+
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'service': 'NeuroAI Brain MRI Diagnostic API',
+        'models_ready': list(LOADED_MODELS.keys())
+    })
+
+
+
 @app.route('/')
 def index():
     return render_template('index.html', class_descriptions=CLASS_DESCRIPTIONS)

@@ -41,6 +41,15 @@
         <i class="fa-solid fa-book-medical"></i> Clinical Methodology
       </button>
     </nav>
+
+    <!-- Backend Connection Indicator -->
+    <div class="backend-status-wrap">
+      <button id="btn-backend-settings" class="backend-badge checking" onclick="openBackendModal()" title="Click to view/configure Render Backend API">
+        <span class="status-dot"></span>
+        <span id="backend-status-text">Connecting Backend...</span>
+        <i class="fa-solid fa-gear" style="font-size: 0.72rem; margin-left: 3px; opacity: 0.7;"></i>
+      </button>
+    </div>
   </header>
 
   <!-- Main App Container -->
@@ -357,6 +366,28 @@
     </section>
 
   </main>
+
+  <!-- Backend API Settings Modal -->
+  <div id="backend-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-server" style="color: #0284c7;"></i> Backend API Configuration</h3>
+        <button class="modal-close" onclick="closeBackendModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem; line-height: 1.5;">
+          Connect this Vercel frontend to your Render deep learning backend API.
+        </p>
+        <label style="display: block; font-size: 0.78rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">Render Backend URL:</label>
+        <input type="url" id="input-backend-url" class="custom-input" placeholder="https://neuroai-brain-detection.onrender.com" style="width: 100%; margin-bottom: 0.85rem; box-sizing: border-box; font-size: 0.82rem; padding: 0.55rem 0.75rem;">
+        <div id="backend-ping-status" style="font-size: 0.78rem; margin-bottom: 0.85rem; padding: 8px 12px; border-radius: 6px; display: none; line-height: 1.4;"></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="nav-btn" type="button" onclick="testBackendConnection()"><i class="fa-solid fa-bolt"></i> Test Connection</button>
+          <button class="btn-primary" type="button" onclick="saveBackendUrl()"><i class="fa-solid fa-check"></i> Save & Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- JavaScript Application Logic -->
   <script src="/static/js/app.js"></script>

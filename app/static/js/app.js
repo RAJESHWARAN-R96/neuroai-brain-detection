@@ -4,11 +4,130 @@ let currentFile = null;
 let currentSamplePath = null;
 let currentScanId = null;
 
+// Backend API URL configuration (supports Vercel frontend <-> Render backend)
+function getBackendUrl() {
+  const stored = localStorage.getItem('NEUROAI_BACKEND_URL');
+  if (stored) return stored.trim().replace(/\/+$/, '');
+  if (window.NEUROAI_BACKEND_URL) return window.NEUROAI_BACKEND_URL.trim().replace(/\/+$/, '');
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://neuroai-brain-detection.onrender.com';
+  }
+  return '';
+}
+
+function resolveApiUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
+    return path;
+  }
+  const base = getBackendUrl();
+  if (!base) return path;
+  const cleanPath = path.startsWith('/') ? path : '/' + path;
+  return `${base}${cleanPath}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initDropzone();
   loadSampleList();
   loadPatientHistory();
+  checkBackendConnection();
 });
+
+// Check & Ping Backend Connection Status
+async function checkBackendConnection() {
+  const badge = document.getElementById('btn-backend-settings');
+  const text = document.getElementById('backend-status-text');
+  if (!badge || !text) return;
+
+  const url = getBackendUrl();
+  text.innerText = url ? 'Connecting to Render...' : 'Checking Backend...';
+  badge.className = 'backend-badge checking';
+
+  try {
+    const healthUrl = resolveApiUrl('/api/health');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const res = await fetch(healthUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      badge.className = 'backend-badge online';
+      text.innerText = 'Backend: Online';
+    } else {
+      badge.className = 'backend-badge error';
+      text.innerText = 'Backend Error';
+    }
+  } catch (err) {
+    if (url && (url.includes('onrender.com') || window.location.hostname.includes('vercel.app'))) {
+      badge.className = 'backend-badge waking';
+      text.innerText = 'Waking up Render (free tier)...';
+      // Render free tier spins down on idle; automatically re-check every 8s
+      setTimeout(checkBackendConnection, 8000);
+    } else {
+      badge.className = 'backend-badge error';
+      text.innerText = 'Backend Offline';
+    }
+  }
+}
+
+// Modal Settings for Backend API URL
+function openBackendModal() {
+  const modal = document.getElementById('backend-modal');
+  const input = document.getElementById('input-backend-url');
+  if (input) input.value = getBackendUrl();
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeBackendModal() {
+  const modal = document.getElementById('backend-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function testBackendConnection() {
+  const input = document.getElementById('input-backend-url');
+  const status = document.getElementById('backend-ping-status');
+  if (!input || !status) return;
+
+  const targetUrl = input.value.trim().replace(/\/+$/, '');
+  status.style.display = 'block';
+  status.style.background = 'rgba(2, 132, 199, 0.12)';
+  status.style.color = '#0284c7';
+  status.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pinging ${targetUrl || 'current origin'}... (Render takes ~30s if waking up)`;
+
+  try {
+    const pingEndpoint = targetUrl ? `${targetUrl}/api/health` : '/api/health';
+    const res = await fetch(pingEndpoint);
+    if (res.ok) {
+      status.style.background = 'rgba(34, 197, 94, 0.15)';
+      status.style.color = '#15803d';
+      status.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connection successful! Render backend is live and ready.';
+    } else {
+      status.style.background = 'rgba(239, 68, 68, 0.15)';
+      status.style.color = '#b91c1c';
+      status.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Server returned status code: ${res.status}`;
+    }
+  } catch (err) {
+    status.style.background = 'rgba(245, 158, 11, 0.15)';
+    status.style.color = '#b45309';
+    status.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Backend not reachable yet. If it was sleeping, please wait ~30s for Render to wake up and test again.';
+  }
+}
+
+function saveBackendUrl() {
+  const input = document.getElementById('input-backend-url');
+  if (input) {
+    const val = input.value.trim();
+    if (val) {
+      localStorage.setItem('NEUROAI_BACKEND_URL', val);
+    } else {
+      localStorage.removeItem('NEUROAI_BACKEND_URL');
+    }
+    closeBackendModal();
+    checkBackendConnection();
+    loadSampleList();
+    loadPatientHistory();
+  }
+}
 
 // Tab Navigation
 function switchTab(tabId) {
@@ -84,7 +203,7 @@ function handleFileUpload(file) {
 let sampleMap = {};
 async function loadSampleList() {
   try {
-    const res = await fetch('/api/sample-images');
+    const res = await fetch(resolveApiUrl('/api/sample-images'));
     const data = await res.json();
     if (data.status === 'success') {
       sampleMap = data.samples;
@@ -114,7 +233,7 @@ function loadSampleMRI(className) {
   const rawView = document.getElementById('view-raw');
   const placeholder = document.getElementById('viewer-placeholder');
   
-  rawView.src = randomSample;
+  rawView.src = resolveApiUrl(randomSample);
   rawView.style.display = 'block';
   if (placeholder) placeholder.style.display = 'none';
 
@@ -150,7 +269,7 @@ async function runDiagnosis() {
   formData.append('xai_method', document.getElementById('xai-select').value);
 
   try {
-    const response = await fetch('/api/predict', {
+    const response = await fetch(resolveApiUrl('/api/predict'), {
       method: 'POST',
       body: formData
     });
@@ -185,9 +304,9 @@ function displayDiagnosisResults(data) {
   if (opacityControl) opacityControl.style.display = 'flex';
   if (exportBtn) exportBtn.style.display = 'inline-flex';
 
-  rawView.src = data.images.preprocessed;
+  rawView.src = resolveApiUrl(data.images.preprocessed);
   rawView.style.display = 'block';
-  xaiView.src = data.images.gradcam;
+  xaiView.src = resolveApiUrl(data.images.gradcam);
   xaiView.style.display = 'block';
   xaiView.style.opacity = '0.65';
   document.getElementById('xai-opacity').value = 65;
@@ -310,7 +429,7 @@ async function exportPDFReport() {
   exportBtn.disabled = true;
 
   try {
-    const res = await fetch('/api/export-report', {
+    const res = await fetch(resolveApiUrl('/api/export-report'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_id: currentScanId })
@@ -340,7 +459,7 @@ async function exportPDFReport() {
 // Patient Database
 async function loadPatientHistory() {
   try {
-    const res = await fetch('/api/history');
+    const res = await fetch(resolveApiUrl('/api/history'));
     const data = await res.json();
     if (data.status !== 'success') return;
 
