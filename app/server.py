@@ -342,11 +342,23 @@ def predict():
             heatmap = generate_radiological_saliency_heatmap((224, 224), (cx, cy), (bx, by, bw, bh))
         else:
             try:
-                xai_input = input_tensor.clone().detach().requires_grad_(True)
-                cam_generator = GradCAMPlusPlus(eval_model) if xai_method == 'gradcam_plus_plus' else GradCAM(eval_model)
-                with torch.enable_grad():
-                    heatmap = cam_generator.generate(xai_input, class_idx=pred_idx)
-                del xai_input
+                # In cloud low-memory environments (Render 512MB limit), use Zero-Backprop CAM
+                # to eliminate PyTorch autograd engine memory pools and keep total RAM < 380MB
+                is_cloud = bool(os.environ.get('RENDER') or os.environ.get('VERCEL') or os.environ.get('PORT'))
+                if is_cloud and hasattr(eval_model, 'features'):
+                    with torch.no_grad():
+                        feats = eval_model.features(input_tensor)
+                        cam_weights = torch.mean(feats[0], dim=(1, 2))
+                        cam_raw = torch.sum(feats[0] * cam_weights.view(-1, 1, 1), dim=0).cpu().numpy()
+                        cam_raw = np.maximum(cam_raw, 0)
+                        diff = cam_raw.max() - cam_raw.min()
+                        heatmap = (cam_raw - cam_raw.min()) / (diff + 1e-8) if diff > 1e-8 else np.zeros((224, 224), dtype=np.float32)
+                else:
+                    xai_input = input_tensor.clone().detach().requires_grad_(True)
+                    cam_generator = GradCAMPlusPlus(eval_model) if xai_method == 'gradcam_plus_plus' else GradCAM(eval_model)
+                    with torch.enable_grad():
+                        heatmap = cam_generator.generate(xai_input, class_idx=pred_idx)
+                    del xai_input
             except Exception as e:
                 # Fallback for models without conv hooks
                 print(f"[!] Warning generating Grad-CAM: {e}")
