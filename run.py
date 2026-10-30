@@ -14,11 +14,14 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     args = parser.parse_args()
 
+    port = int(os.environ.get('PORT', args.port))
+    host = '0.0.0.0' if os.environ.get('PORT') else args.host
+
     print("=" * 70)
     print("  NEURO-AI: METAHEURISTIC OPTIMIZATION-ENHANCED BRAIN MRI PLATFORM  ")
     print("=" * 70)
     print(f"[*] Base Directory: {BASE_DIR}")
-    print(f"[*] Starting clinical server at: http://{args.host}:{args.port}")
+    print(f"[*] Starting clinical server at: http://{host}:{port}")
     print("=" * 70)
 
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    app.run(host=host, port=port, debug=args.debug)
