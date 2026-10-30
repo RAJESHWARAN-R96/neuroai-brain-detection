@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+uploads/*
+!uploads/.gitkeep
+data/Kaggle_dataset/
+*.log
+.env
+.venv/
+env/
